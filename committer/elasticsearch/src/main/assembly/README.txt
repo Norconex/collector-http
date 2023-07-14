@@ -1,5 +1,5 @@
-Norconex Committer Core
-Copyright 2008 Norconex Inc.
+Norconex Committer ElasticSearch
+Copyright 2023 Norconex Inc.
 
 General Information:
 ====================

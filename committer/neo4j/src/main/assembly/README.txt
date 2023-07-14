@@ -1,14 +1,14 @@
-Norconex Committer Template
-Copyright 2008 Norconex Inc.
+Norconex Committer Neo4j
+Copyright 2023 Norconex Inc.
 
 General Information:
 ====================
 
-For any inquiries about Norconex Committer Template, 
+For any inquiries about Norconex Committer Neo4j, 
 please contact Norconex Inc. at info@norconex.com.
 
 This product website and documentation is located at:
-https://opensource.norconex.com/committers/template/
+https://opensource.norconex.com/committers/neo4j/
 
 Norconex licenses:
 ==================

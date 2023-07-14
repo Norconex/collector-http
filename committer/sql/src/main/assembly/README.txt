@@ -1,14 +1,14 @@
-Norconex Committer Template
+Norconex Committer SQL
 Copyright 2008 Norconex Inc.
 
 General Information:
 ====================
 
-For any inquiries about Norconex Committer Template, 
+For any inquiries about Norconex Committer SQL, 
 please contact Norconex Inc. at info@norconex.com.
 
 This product website and documentation is located at:
-https://opensource.norconex.com/committers/template/
+https://opensource.norconex.com/committers/sql/
 
 Norconex licenses:
 ==================

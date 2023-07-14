@@ -1,4 +1,4 @@
-Norconex Committer Template
+Norconex Committer Azure Cognitive Search
 Copyright 2023 Norconex Inc.
 
 General Information:

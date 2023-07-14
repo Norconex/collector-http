@@ -1,14 +1,14 @@
-Norconex Committer Core
-Copyright 2008 Norconex Inc.
+Norconex Committer Apache Solr
+Copyright 2023 Norconex Inc.
 
 General Information:
 ====================
 
-For any inquiries about Norconex Committer Elasticsearch, 
+For any inquiries about Norconex Committer Apache Solr, 
 please contact Norconex Inc. at info@norconex.com.
 
 This product website and documentation is located at:
-https://opensource.norconex.com/committers/elasticsearch/
+https://opensource.norconex.com/committers/solr/
 
 Norconex licenses:
 ==================

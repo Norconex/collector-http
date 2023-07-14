@@ -1,14 +1,14 @@
-Norconex Committer Template
-Copyright 2008 Norconex Inc.
+Norconex Committer Apache Kafka
+Copyright 2023 Norconex Inc.
 
 General Information:
 ====================
 
-For any inquiries about Norconex Committer Template, 
+For any inquiries about Norconex Committer Apache Kafka, 
 please contact Norconex Inc. at info@norconex.com.
 
 This product website and documentation is located at:
-https://opensource.norconex.com/committers/template/
+https://opensource.norconex.com/committers/apachekafka/
 
 Norconex licenses:
 ==================
