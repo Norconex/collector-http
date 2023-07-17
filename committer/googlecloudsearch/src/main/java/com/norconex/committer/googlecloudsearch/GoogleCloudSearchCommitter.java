@@ -14,7 +14,11 @@
  */
 package com.norconex.committer.googlecloudsearch;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -25,7 +29,15 @@ import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringExclude;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
+import com.google.api.client.http.InputStreamContent;
+import com.google.api.services.cloudsearch.v1.model.Item;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
+import com.google.enterprise.cloudsearch.sdk.indexing.IndexingItemBuilder;
+import com.google.enterprise.cloudsearch.sdk.indexing.IndexingItemBuilder.FieldOrValue;
 import com.google.enterprise.cloudsearch.sdk.indexing.IndexingService;
+import com.google.enterprise.cloudsearch.sdk.indexing.IndexingService.ContentFormat;
+import com.google.enterprise.cloudsearch.sdk.indexing.IndexingService.RequestMode;
 import com.norconex.committer.core.CommitterException;
 import com.norconex.committer.core.CommitterRequest;
 import com.norconex.committer.core.DeleteRequest;
@@ -42,6 +54,9 @@ public class GoogleCloudSearchCommitter extends AbstractBatchCommitter {
 
     private static final String CONFIG_KEY_CONFIG_FILE = "configFilePath";
     private static final String TARGET_PRODUCT_NAME = "Google Cloud Search";
+    private static final String FIELD_LAST_MODIFIED = "Last-Modified";
+    private static final String FIELD_CONTENT_TYPE = "document.contentType";
+    private static final String FIELD_TITLE = "title";
     
     @ToStringExclude
     @HashCodeExclude
@@ -81,26 +96,22 @@ public class GoogleCloudSearchCommitter extends AbstractBatchCommitter {
     protected void commitBatch(Iterator<CommitterRequest> it)
             throws CommitterException {
 
-        var json = new StringBuilder();
-
         var docCountUpserts = 0;
         var docCountDeletes = 0;
         try {
             while (it.hasNext()) {
                 var req = it.next();
                 if (req instanceof UpsertRequest upsert) {
-                    appendUpsertRequest(json, upsert);
+                    addItem(upsert);                    
                     docCountUpserts++;
+                    
                 } else if (req instanceof DeleteRequest delete) {
-                    appendDeleteRequest(json, delete);
+                    deleteItem(delete);                    
                     docCountDeletes++;
+                    
                 } else {
                     throw new CommitterException("Unsupported request: " + req);
                 }
-            }
-            
-            if (LOG.isTraceEnabled()) {
-                LOG.trace("JSON POST:\n{}", StringUtils.trim(json.toString()));
             }
 
             if(docCountUpserts > 0) {
@@ -130,7 +141,54 @@ public class GoogleCloudSearchCommitter extends AbstractBatchCommitter {
 //            }
 //        }
     }
+
+    private void addItem(UpsertRequest upsert) throws IOException {
+        
+        String contentType = upsert.getMetadata().getString(FIELD_CONTENT_TYPE);
+        
+        var contentStream = new InputStreamContent(
+                contentType,
+                upsert.getContent());
+        
+        indexingService.indexItemAndContent(
+                createItem(upsert, contentType),
+                contentStream,
+                null,
+                ContentFormat.TEXT, 
+                RequestMode.ASYNCHRONOUS);
+        
+        LOG.debug("Sent doc `{}` for indexing", upsert.getReference());
+    }
     
+    private void deleteItem(DeleteRequest delete) throws IOException {        
+        indexingService.deleteItem(
+                delete.getReference(), 
+                String.valueOf(
+                        System.currentTimeMillis()).getBytes(
+                                StandardCharsets.UTF_8),
+                RequestMode.ASYNCHRONOUS);
+        
+        LOG.debug("Sent doc `{}` for deletion", delete.getReference());
+    }
+    
+    private Item createItem(UpsertRequest upsert, String contentType) {
+        Multimap<String, Object> propertiesMap = ArrayListMultimap.create();
+        for (Map.Entry<String, List<String>> entry : upsert.getMetadata().entrySet()) {
+            propertiesMap.putAll(entry.getKey(), entry.getValue());
+        }
+        
+        return IndexingItemBuilder.fromConfiguration(upsert.getReference())
+                .setItemType(IndexingItemBuilder.ItemType.CONTENT_ITEM)
+                .setMimeType(FieldOrValue.withValue(contentType))
+                .setSourceRepositoryUrl(
+                        FieldOrValue.withValue(upsert.getReference()))
+                .setValues(propertiesMap)
+                .setTitle(FieldOrValue.withField(FIELD_TITLE))
+                .setUpdateTime(FieldOrValue.withField(FIELD_LAST_MODIFIED))
+                .build();
+                
+    }
+
     @Override
     protected void closeBatchCommitter() throws CommitterException {
         LOG.info("Shutting down indexing service...");
@@ -152,22 +210,15 @@ public class GoogleCloudSearchCommitter extends AbstractBatchCommitter {
 
         LOG.info(done);
     }
-
-    private void appendUpsertRequest(StringBuilder json, UpsertRequest req)
-            throws CommitterException {
-    }
-
-    private void appendDeleteRequest(StringBuilder json, DeleteRequest delete) {        
-    }
     
     @Override
     protected void saveBatchCommitterToXML(XML xml) {
-        xml.addElement(CONFIG_KEY_CONFIG_FILE, configFilePath);
+        xml.addElement(CONFIG_KEY_CONFIG_FILE, getConfigFilePath());
     }
     
     @Override
     protected void loadBatchCommitterFromXML(XML xml) {
-        configFilePath = xml.getString(CONFIG_KEY_CONFIG_FILE, null);
+        setConfigFilePath(xml.getString(CONFIG_KEY_CONFIG_FILE, null));
     }
     
     @Override
