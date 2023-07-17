@@ -26,11 +26,17 @@
   <name>Norconex Committer Google Cloud Search</name>
 
   <properties>
-    <sonar.projectKey>${project.groupId}:${project.artifactId}</sonar.projectKey>    
+    <sonar.projectKey>${project.groupId}:${project.artifactId}</sonar.projectKey>
+    <google.cloud.search.sdk.version>v1-0.0.6</google.cloud.search.sdk.version>    
   </properties>
   <inceptionYear>2023</inceptionYear>
 
   <dependencies>
+  <dependency>
+        <groupId>com.google.enterprise.cloudsearch</groupId>
+        <artifactId>google-cloudsearch-indexing-connector-sdk</artifactId>
+        <version>${google.cloud.search.sdk.version}</version>
+    </dependency>
     <dependency>
       <groupId>com.norconex.commons</groupId>
       <artifactId>norconex-commons-lang</artifactId>

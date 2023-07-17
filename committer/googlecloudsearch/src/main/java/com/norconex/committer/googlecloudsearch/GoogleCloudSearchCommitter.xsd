@@ -23,19 +23,8 @@
       <xs:complexContent> 
         <xs:extension base="AbstractBatchCommitter">
           <xs:all>
-            <xs:element name="nodes" type="xs:string" minOccurs="0" maxOccurs="1" />
-            <xs:element name="indexName" type="xs:string" minOccurs="1" maxOccurs="1" />
-            <xs:element name="typeName" type="xs:string" minOccurs="0" maxOccurs="1" />
-            <xs:element name="ignoreResponseErrors" type="xs:boolean" minOccurs="0" maxOccurs="1" />
-            <xs:element name="discoverNodes" type="xs:boolean" minOccurs="0" maxOccurs="1" />
-            <xs:element name="dotReplacement" type="xs:string" minOccurs="0" maxOccurs="1" />
-            <xs:element ref="credentials" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="jsonFieldsPattern" type="xs:string" minOccurs="0" maxOccurs="1" />
-            <xs:element name="connectionTimeout" type="xs:string" minOccurs="0" maxOccurs="1" />
-            <xs:element name="socketTimeout" type="xs:string" minOccurs="0" maxOccurs="1" />
-            <xs:element name="fixBadIds" type="xs:boolean" minOccurs="0" maxOccurs="1" />
-            <xs:element name="sourceIdField" type="xs:string" minOccurs="0" maxOccurs="1" />
-            <xs:element name="targetContentField" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="configFilePath" type="nonEmptyString"
+              minOccurs="1" maxOccurs="1" />
           </xs:all>
         </xs:extension> 
       </xs:complexContent>

@@ -17,7 +17,15 @@ package com.norconex.committer.googlecloudsearch;
 import java.util.Iterator;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.EqualsExclude;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.HashCodeExclude;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringExclude;
+import org.apache.commons.lang3.builder.ToStringStyle;
 
+import com.google.enterprise.cloudsearch.sdk.indexing.IndexingService;
 import com.norconex.committer.core.CommitterException;
 import com.norconex.committer.core.CommitterRequest;
 import com.norconex.committer.core.DeleteRequest;
@@ -32,8 +40,41 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class GoogleCloudSearchCommitter extends AbstractBatchCommitter {
 
+    private static final String CONFIG_KEY_CONFIG_FILE = "configFilePath";
+    private static final String TARGET_PRODUCT_NAME = "Google Cloud Search";
+    
+    @ToStringExclude
+    @HashCodeExclude
+    @EqualsExclude
+    private IndexingService indexingService;
+    
+    private String configFilePath;
+    
+    /**
+     * Gets the Path to the Connector SDK configuration file
+     * 
+     * @return Path to the Connector SDK configuration file
+     */
+    public String getConfigFilePath() {
+        return configFilePath;
+    }
+
+    /**
+     * Sets the Connector SDK config file path
+     * 
+     * @param   path    Path to the Connector SDK configuration file
+     */
+    public void setConfigFilePath(String path) {
+        configFilePath = path;
+    }
+
     @Override
     protected void initBatchCommitter() throws CommitterException {
+        if (StringUtils.isBlank(configFilePath)) {
+            throw new CommitterException(
+                    "Missing required plugin configuration entry: "
+                            + CONFIG_KEY_CONFIG_FILE);
+        }
     }
 
     @Override
@@ -42,49 +83,106 @@ public class GoogleCloudSearchCommitter extends AbstractBatchCommitter {
 
         var json = new StringBuilder();
 
-        var docCount = 0;
+        var docCountUpserts = 0;
+        var docCountDeletes = 0;
         try {
             while (it.hasNext()) {
                 var req = it.next();
                 if (req instanceof UpsertRequest upsert) {
                     appendUpsertRequest(json, upsert);
+                    docCountUpserts++;
                 } else if (req instanceof DeleteRequest delete) {
                     appendDeleteRequest(json, delete);
+                    docCountDeletes++;
                 } else {
                     throw new CommitterException("Unsupported request: " + req);
                 }
-                docCount++;
             }
+            
             if (LOG.isTraceEnabled()) {
                 LOG.trace("JSON POST:\n{}", StringUtils.trim(json.toString()));
             }
 
-            LOG.info("Sent {} commit operations to Google Cloud Search.", 
-                    docCount);
+            if(docCountUpserts > 0) {
+                LOG.info("Sent {} upsert commit operation(s) to {}.",
+                        docCountUpserts,
+                        TARGET_PRODUCT_NAME);
+            }
+            
+            if(docCountDeletes> 0) {
+                LOG.info(
+                        "Sent {} delete commit operation(s) to {}.", 
+                        docCountDeletes,
+                        TARGET_PRODUCT_NAME);
+            }
         } catch (CommitterException e) {
             throw e;
         } catch (Exception e) {
             throw new CommitterException(
-                    "Could not commit JSON batch to Google Cloud Search.", e);
-        }
-    }
-
-    private void appendDeleteRequest(StringBuilder json, DeleteRequest delete) {        
+                    "Could not commit JSON batch to " + TARGET_PRODUCT_NAME, e);
+        } 
+//        finally {
+//            // Shutdown IndexingService, flush remaining batch queue
+//            try {
+//                close();
+//            } catch (CommitterException e) {
+//                LOG.error("Unable to shutdown IndexingService. ", e);
+//            }
+//        }
     }
     
     @Override
     protected void closeBatchCommitter() throws CommitterException {
+        LOG.info("Shutting down indexing service...");
+        final String done = "Done.";
+
+        if(indexingService == null) {
+            LOG.info(done);
+            return;
+        }
+
+        if(! indexingService.isRunning()) {
+            LOG.info(done);
+            return;
+        }
+
+        indexingService.stopAsync().awaitTerminated();
+
+        super.closeBatchCommitter();
+
+        LOG.info(done);
     }
 
     private void appendUpsertRequest(StringBuilder json, UpsertRequest req)
             throws CommitterException {
     }
 
+    private void appendDeleteRequest(StringBuilder json, DeleteRequest delete) {        
+    }
+    
     @Override
     protected void saveBatchCommitterToXML(XML xml) {
+        xml.addElement(CONFIG_KEY_CONFIG_FILE, configFilePath);
     }
+    
     @Override
     protected void loadBatchCommitterFromXML(XML xml) {
-        
+        configFilePath = xml.getString(CONFIG_KEY_CONFIG_FILE, null);
+    }
+    
+    @Override
+    public boolean equals(final Object other) {
+        return EqualsBuilder.reflectionEquals(this, other);
+    }
+
+    @Override
+    public int hashCode() {
+        return HashCodeBuilder.reflectionHashCode(this);
+    }
+
+    @Override
+    public String toString() {
+        return new ReflectionToStringBuilder(this,
+                ToStringStyle.SHORT_PREFIX_STYLE).toString();
     }
 }
