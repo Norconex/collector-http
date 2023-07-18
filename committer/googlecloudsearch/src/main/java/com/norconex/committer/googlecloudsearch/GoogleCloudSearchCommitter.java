@@ -12,13 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.norconex.committer.googlecloudsearch;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -33,11 +36,13 @@ import com.google.api.client.http.InputStreamContent;
 import com.google.api.services.cloudsearch.v1.model.Item;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import com.google.enterprise.cloudsearch.sdk.config.Configuration;
 import com.google.enterprise.cloudsearch.sdk.indexing.IndexingItemBuilder;
 import com.google.enterprise.cloudsearch.sdk.indexing.IndexingItemBuilder.FieldOrValue;
 import com.google.enterprise.cloudsearch.sdk.indexing.IndexingService;
 import com.google.enterprise.cloudsearch.sdk.indexing.IndexingService.ContentFormat;
 import com.google.enterprise.cloudsearch.sdk.indexing.IndexingService.RequestMode;
+import com.google.enterprise.cloudsearch.sdk.indexing.IndexingServiceImpl;
 import com.norconex.committer.core.CommitterException;
 import com.norconex.committer.core.CommitterRequest;
 import com.norconex.committer.core.DeleteRequest;
@@ -47,6 +52,35 @@ import com.norconex.commons.lang.xml.XML;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Commits documents to Google Cloud Search using the Google Cloud Search
+ * Connector SDK.
+ *
+ * <h3>Configuration</h3>
+ *
+ * <p>
+ * The committer is using the Google Cloud SearchConnector SDK to communicate 
+ * with the Google Cloud Search API, therefore a valid Connector SDK 
+ * configuration file is required. The location of this file must be set via the
+ * {@link #configFilePath} property.
+ * 
+ * The configuration file must contain these 2 entries.
+ * {@value IndexingServiceImpl#SOURCE_ID}, and 
+ * api.serviceAccountPrivateKeyFile
+ * 
+ * An example configuration file can be found in the 
+ * <a href="https://developers.google.com/cloud-search/docs/reference/connector-configuration#configuration-file-example">
+ * Connector SDK Documentation</a>
+ *
+ * <h3>XML configuration usage</h3>
+ *
+ * <committer class="GoogleCloudSearchCommitter">
+ *   <configFilePath>/path/to/config</configFilePath>
+ * </committer>
+ * }
+ * 
+ * @author Harinder Hanjan
+ */
 
 @SuppressWarnings("javadoc")
 @Slf4j
@@ -87,15 +121,24 @@ public class GoogleCloudSearchCommitter extends AbstractBatchCommitter {
     protected void initBatchCommitter() throws CommitterException {
         if (StringUtils.isBlank(configFilePath)) {
             throw new CommitterException(
-                    "Missing required plugin configuration entry: "
-                            + CONFIG_KEY_CONFIG_FILE);
+                    "You must specify the path to a Google Connector SDK"
+                    + "configuration file via the " + CONFIG_KEY_CONFIG_FILE + 
+                    " parameter.");
         }
+        
+        //TODO: Ensure the config file is valid
     }
 
     @Override
     protected void commitBatch(Iterator<CommitterRequest> it)
             throws CommitterException {
 
+        try {
+            createAndStartIndexingService();
+        } catch (IOException | GeneralSecurityException e) {
+            throw new CommitterException("Error starting Indexing Service.", e);
+        }
+        
         var docCountUpserts = 0;
         var docCountDeletes = 0;
         try {
@@ -173,7 +216,8 @@ public class GoogleCloudSearchCommitter extends AbstractBatchCommitter {
     
     private Item createItem(UpsertRequest upsert, String contentType) {
         Multimap<String, Object> propertiesMap = ArrayListMultimap.create();
-        for (Map.Entry<String, List<String>> entry : upsert.getMetadata().entrySet()) {
+        for (Map.Entry<String, List<String>> entry 
+                : upsert.getMetadata().entrySet()) {
             propertiesMap.putAll(entry.getKey(), entry.getValue());
         }
         
@@ -185,8 +229,30 @@ public class GoogleCloudSearchCommitter extends AbstractBatchCommitter {
                 .setValues(propertiesMap)
                 .setTitle(FieldOrValue.withField(FIELD_TITLE))
                 .setUpdateTime(FieldOrValue.withField(FIELD_LAST_MODIFIED))
+                .build();  
+    }
+    
+    private void createAndStartIndexingService() 
+            throws IOException, GeneralSecurityException {
+        
+        if(indexingService != null && indexingService.isRunning()) {
+            return;
+        }
+        
+        LOG.info("Starting Indexing Service");
+        
+        String[] args = { "-Dconfig=" + getConfigFilePath() }; 
+        Configuration.initConfig(args);
+        
+        indexingService = IndexingServiceImpl.Builder
+                .fromConfiguration(
+                        Optional.empty(), 
+                        GoogleCloudSearchCommitter.class.getName())
                 .build();
-                
+        
+        indexingService.startAsync().awaitRunning();
+        
+        LOG.info("Indexing Service started");
     }
 
     @Override
