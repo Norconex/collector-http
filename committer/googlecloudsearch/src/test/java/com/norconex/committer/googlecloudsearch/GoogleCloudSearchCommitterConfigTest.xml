@@ -17,5 +17,5 @@
 -->
 
 <committer class="com.norconex.committer.googlecloudsearch.GoogleCloudSearchCommitter">
-  
-</commiter>
+  <configFilePath>/path/to/config</configFilePath>
+</committer>
