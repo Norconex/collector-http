@@ -60,7 +60,7 @@
     <commons-io.version>2.13.0</commons-io.version>
     <commons-lang3.version>3.12.0</commons-lang3.version>
     <commons-logging.version>1.2</commons-logging.version>
-    <commons-text.version>1.10.0</commons-text.version>
+    <commons-text.version>1.11.0</commons-text.version>
     
     <!-- Other dependencies -->
     <aws-java-sdk.version>1.12.457</aws-java-sdk.version>
