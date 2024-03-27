@@ -28,7 +28,7 @@ jobs:
       - name: Get modified files 
         if: steps.check_dependabot.outputs.check == '0'
         id: modified-files        
-        uses: tj-actions/changed-files@v42.1.0
+        uses: tj-actions/changed-files@v44.0.0
         with:
           files_ignore: |     
             # ignore the yml files and header files in the github folder       
