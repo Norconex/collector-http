@@ -65,7 +65,7 @@ jobs:
       # convert the string to lower case for SNAPSHOT build    
       - name: convert string to lowercase
         id: string
-        uses: ASzc/change-string-case-action@v1
+        uses: ASzc/change-string-case-action@v6
         with:
           string: ${{ env.tmp_version }}
       
